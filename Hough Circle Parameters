@@ -1,0 +1,7 @@
+Hough Circle Parameters:
+dp: resoluton of the accumulator, smaller dp means more accurate accumulator but increases computational load (usual value are 1 and 2) 
+minDist: minimum distance between the centers of the detected circles; range: 0-20
+param1: upper threshold for Canny Edge Detection, any gradient value higher than the threshold is considered an edge; range: 1-200
+param2: accumulartor threshold for the circle centers at the detection stage, determines the minimum bnumber of votes a candidate circle must receive to be considered a circle; range: 1-100 
+minRadius: minimum circle radius; range: 0-20
+maxRadius: maximun circle radius; range: 0-20
