@@ -6,17 +6,13 @@ import csv
 um_per_pixel = 0.3333333333333333
 
 # load images
-bfFile = 'bf 3.tif'
+bfFile = 'bf 8.tif'
 bfimg = cv2.imread(bfFile)
-trFile = 'tr 3.tif'
+trFile = 'tr 8.tif'
 trimg = cv2.imread(trFile)
 trgray = cv2.cvtColor(trimg, cv2.COLOR_BGR2GRAY)
 global_average_intensity = np.mean(trgray)
-# cv2.imshow('image1', img)
-# cv2.waitKey(0)
 gray = cv2.cvtColor(bfimg, cv2.COLOR_BGR2GRAY)
-# gray = cv2.equalizeHist(gray)
-# cv2.imshow('equalize', gray)
 gray = cv2.GaussianBlur(gray, (7, 7), 1.5)
 
 # change constrast and brightness
@@ -30,12 +26,10 @@ cv2.imshow("canny edges", edges)
 circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=10, param1=5, param2=15, minRadius=4, maxRadius=15)
 if circles is not None:
     circles = np.uint16(circles)
-    num = 1;
+    num = 1
     for circle in circles[0, :]:
         center = (circle[0], circle[1])
-        # print(center)
         radius = circle[2]
-        # print(radius)
         area = np.pi * (radius ** 2)
         perimeter = 2 * np.pi * radius
         circularity = (4 * np.pi * area) / (perimeter ** 2)
@@ -57,16 +51,15 @@ def store_values(detected, trimage):
         circles = np.uint16(detected)
         for circle in circles[0, :]:
             center = (circle[0], circle[1])
-            # print(center)
             radius = circle[2]
             diameter = radius * 2 * um_per_pixel
-            # print(radius)
             area = np.pi * ((diameter/2) ** 2)
             perimeter = 2 * np.pi * (diameter/2)
             circularity = (4 * np.pi * area) / (perimeter ** 2)
             circularity_threshold = 0.5
             if circularity > circularity_threshold:
-                specificCell = {'center': center, 'radius in pixels': radius, 'diameter': diameter, 'area': area, 'Mean Gray Value': 0, 'CTCF': 0}
+                specificCell = {'center': center, 'radius in pixels': radius, 'diameter': diameter, 'area': area,
+                                'Mean Gray Value': 0, 'CTCF': 0, 'Normalized Gray Value':0}
                 cells[index] = specificCell
                 index += 1
     return cells
@@ -76,18 +69,19 @@ def find_intensity(cells, trimage):
     for index in range(len(cells)):
         (x, y) = cells[index]['center']
         radius = cells[index]['radius in pixels']
-        total_intensity = 0;
+        height, width = trimage.shape[:2]
+        total_intensity = 0
         numpixel = 0
         # Traverse through each pixel and check if it's within the circle
-        for i in range(trimage.shape[0]):
-            for j in range(trimage.shape[1]):
+        for i in range(height):
+            for j in range(width):
                 # Calculate the distance from the center (x, y)
                 distance = np.sqrt((j - x) ** 2 + (i - y) ** 2)
                 # If the distance is less than or equal to the radius, the pixel is inside the circle
                 if distance <= radius:
-                    intensity = trimage[y, x]
+                    intensity = trimage[i, j]
                     total_intensity += intensity
-                    numpixel += 1;
+                    numpixel += 1
         # Calculate the Mean Gray Value of the pixels within the circle
         mean_gray_value = total_intensity // numpixel
         # Calculate integrated density
@@ -95,13 +89,29 @@ def find_intensity(cells, trimage):
         integrated_density = mean_gray_value * area
         # corrected total cell fluorescence (CTCF) = Integrated Density – (Area of Selected Cell x Mean Fluorescence of Background readings)
         CTCF = integrated_density - (area * global_average_intensity)
+        # dilate cell radius by 20%
+        dilated_radius = radius * 1.2
+        # dilated mean value = mean gray value of the surrounding area without the cell itself
+        total_intensity = 0
+        numpixel = 0
+        for i in range(trimage.shape[0]):
+            for j in range(trimage.shape[1]):
+                # Calculate the distance from the center (x, y)
+                distance = np.sqrt((j - x) ** 2 + (i - y) ** 2)
+                # If the distance is greater than or equal to the radius and smaller than the dilated radius
+                if distance >= radius and distance <= dilated_radius:
+                    intensity = trimage[i, j]
+                    total_intensity += intensity
+                    numpixel += 1
+        dilated_mean_value = total_intensity // numpixel
+        # Calculate Normalized Mean Gray Value the same way as CTCF but with dilated_mean_value
+        normalized_gray_value = integrated_density - (area * dilated_mean_value)
+        # Store values into dictionary
         cells[index]['Mean Gray Value'] = mean_gray_value
         cells[index]['CTCF'] = CTCF
-        print(mean_gray_value)
-        print(CTCF)
+        cells[index]['Normalized Gray Value'] = normalized_gray_value
     return cells
 
-# cv2.imwrite('processed' + fileName, img)
 cells = store_values(circles, trimg)
 cells = find_intensity(cells, trimg)
 
@@ -111,16 +121,14 @@ csv_file_path = 'output.csv'
 # Open the CSV file in write mode
 with open(csv_file_path, 'w', newline='') as csv_file:
     # Specify the field names (keys of the inner dictionaries)
-    fieldnames = cells[1].keys()
-
+    fieldnames = ['Index'] + list(cells[1].keys())
     # Create a DictWriter object with the CSV file and field names
     csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-
     # Write the header to the CSV file
     csv_writer.writeheader()
-
     # Write the data (values of the inner dictionaries) to the CSV file
-    for row in cells.values():
+    for index, row in cells.items():
+        row['Index'] = index
         csv_writer.writerow(row)
 
 cv2.waitKey(0)
