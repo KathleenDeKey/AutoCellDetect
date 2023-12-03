@@ -1,4 +1,16 @@
-Hough Circle Parameters:
+Slider Values
+1. Gaussian Blur
+cv2.GaussianBlur(inputImage, (ksize, ksize), signmaX)
+ksize: a Size object representing the size of the kernel; range: 3-9
+SigmaX: A variable of the type double representing the Gaussian kernel standard deviation in X direction; range 0-3 (include decimal values)
+
+2. Canny Edge Detection
+cv2. Canny(inputImage, threshold1, threshold2)
+threshold1: minVal; range: 0-100
+threshold2: maxVal; range: 0-100
+(Any edges with intensity gradient more than maxVal are sure to be edges and those below minVal are sure to be non-edges, so discarded)
+
+3. Hough Circle Transform:
 dp: resoluton of the accumulator, smaller dp means more accurate accumulator but increases computational load (usual value are 1 and 2) 
 minDist: minimum distance between the centers of the detected circles; range: 0-20
 param1: upper threshold for Canny Edge Detection, any gradient value higher than the threshold is considered an edge; range: 1-200
