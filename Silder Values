@@ -21,3 +21,6 @@ param1: upper threshold for Canny Edge Detection, any gradient value higher than
 param2: accumulartor threshold for the circle centers at the detection stage, determines the minimum bnumber of votes a candidate circle must receive to be considered a circle; range: 1-100 
 minRadius: minimum circle radius; range: 0-20
 maxRadius: maximun circle radius; range: 0-20
+
+5. Conversion Factor
+input from user
