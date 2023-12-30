@@ -6,8 +6,12 @@ import numpy as np
 # ** Choose File **
 # number label for the set of images
 file_number = 7
+# the type of image you want to analyze - True: only bf images are analyzed; False: bf and tr images are analyzed
+bf_only = False
 # name of output Excel file
 output_file_name = 'output_example1.xlsx'
+# relative path to the folder to save your results; will create a new folder if it does not exist
+folder_path = 'results'
 
 # ** constant values **
 
@@ -25,7 +29,7 @@ red = (36, 28, 237)
 # ** Functions **
 
 # Store Values to Dictionary
-def store_values(detected_cells):
+def store_values(detected_cells, bf_only):
     index = 0
     cells = {}
     if detected_cells is not None:
@@ -39,13 +43,19 @@ def store_values(detected_cells):
             circularity = (4 * np.pi * area) / (perimeter ** 2)
             false_positive = contains_red(center, radius)
             is_labeled = near_red_label(center, radius)
-            if circularity > circularity_threshold and (not false_positive) and (is_labeled):
-                cell_intensity = find_cell_intensity(center, radius)
-                corrected_cell_intensity = find_corrected_cell_intensity(center, radius, cell_intensity, area)
-                specific_cell = {'center': center, 'radius in pixels': radius, 'diameter': diameter, 'area': area,
-                                 'Cell Intensity': cell_intensity, 'Corrected Cell Intensity': corrected_cell_intensity}
-                cells[index] = specific_cell
-                index += 1
+            if circularity > circularity_threshold and (not false_positive) and is_labeled:
+                if bf_only:
+                    specific_cell = {'center': center, 'radius in pixels': radius, 'diameter': diameter, 'area': area}
+                    cells[index] = specific_cell
+                    index += 1
+                else:
+                    cell_intensity = find_cell_intensity(center, radius)
+                    corrected_cell_intensity = find_corrected_cell_intensity(center, radius, cell_intensity, area)
+                    specific_cell = {'center': center, 'radius in pixels': radius, 'diameter': diameter, 'area': area,
+                                     'Cell Intensity': cell_intensity,
+                                     'Corrected Cell Intensity': corrected_cell_intensity}
+                    cells[index] = specific_cell
+                    index += 1
     return cells
 
 
@@ -68,15 +78,16 @@ def near_red_label(center, radius):
 
 
 # Draw Cells on Images
-def draw_cells(cells: dict):
+def draw_cells(cells: dict, bf_only):
     for (index, cell) in cells.items():
         center = cell['center']
         radius = cell['radius in pixels']
         cv2.circle(bfimg, center, radius, (0, 255, 0), 2)
-        cv2.circle(trimg, center, radius, (0, 255, 0), 2)
         text_position = (int(center[0] + radius + 10), int(center[1]))
         cv2.putText(bfimg, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        cv2.putText(trimg, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        if not bf_only:
+            cv2.circle(trimg, center, radius, (0, 255, 0), 2)
+            cv2.putText(trimg, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
 # Find total intensity of the cell
@@ -104,34 +115,52 @@ def find_corrected_cell_intensity(center, radius, cell_intensity, area):
 
 
 # Write Results to an Excel file
-def write_file(cells: dict, dataset_number):
+def write_excel_file(cells: dict, dataset_number, bf_only):
     if len(cells) == 0:
         print("No cells were detected.")
         return
     else:
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        output_file_path = os.path.join(folder_path, output_file_name)
         data_frame = pd.DataFrame(cells).T
         data_frame['center'] = data_frame['center'].astype(str)
-        column_order = ['center', 'radius in pixels', 'diameter', 'area', 'Cell Intensity', 'Corrected Cell Intensity']
+        if bf_only:
+            column_order = ['center', 'radius in pixels', 'diameter', 'area']
+            dataset_name = 'bf ' + str(dataset_number)
+        else:
+            column_order = ['center', 'radius in pixels', 'diameter', 'area', 'Cell Intensity',
+                            'Corrected Cell Intensity']
+            dataset_name = 'bf-tr ' + str(dataset_number)
         data_frame = data_frame[column_order]
-        dataset_name = 'dataset ' + str(dataset_number)
-        if os.path.exists(output_file_name):
-            with pd.ExcelWriter(output_file_name, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+        if os.path.exists(output_file_path):
+            with pd.ExcelWriter(output_file_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
                 data_frame.to_excel(writer, sheet_name=dataset_name, index_label='Index')
         else:
-            with pd.ExcelWriter(output_file_name, engine='xlsxwriter') as writer:
+            with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
                 data_frame.to_excel(writer, sheet_name=dataset_name, index_label='Index')
+
+
+# Save Processed Images
+def save_images(bfimg, trimg=None):
+    bf_name = 'Processed bf ' + str(file_number) + '.jpg'
+    cv2.imwrite(os.path.join(folder_path, bf_name), bfimg)
+    if trimg is not None:
+        tr_name = 'Processed tr ' + str(file_number) + '.jpg'
+        cv2.imwrite(os.path.join(folder_path, tr_name), trimg)
 
 
 # ** load images **
 bfFile = 'bf ' + str(file_number) + '.tif'
 bfimg = cv2.imread(bfFile)
-trFile = 'tr ' + str(file_number) + '.tif'
-trimg = cv2.imread(trFile)
+trimg = None
+if not bf_only:
+    trFile = 'tr ' + str(file_number) + '.tif'
+    trimg = cv2.imread(trFile)
 
 # ** preprocessing **
 
 # convert to grayscale
-trGray = cv2.cvtColor(trimg, cv2.COLOR_BGR2GRAY)
 bfGray = cv2.cvtColor(bfimg, cv2.COLOR_BGR2GRAY)
 # change contrast and brightness
 bfGray = cv2.convertScaleAbs(bfGray, alpha=alpha, beta=beta)
@@ -146,11 +175,13 @@ detected_cells = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=10, p
                                   maxRadius=15)
 
 # ** store, save and show result **
-cells = store_values(detected_cells)
-draw_cells(cells)
-write_file(cells, file_number)
+cells = store_values(detected_cells, bf_only)
+draw_cells(cells, bf_only)
+write_excel_file(cells, file_number, bf_only)
 cv2.imshow('Bright Field', bfimg)
-cv2.imshow('Fluorescence', trimg)
+if not bf_only:
+    cv2.imshow('Fluorescence', trimg)
+save_images(bfimg, trimg)
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
