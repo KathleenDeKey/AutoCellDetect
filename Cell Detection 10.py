@@ -6,7 +6,7 @@ import math
 
 # ** Choose File **
 # number label for the set of images
-file_number = 8
+file_number = 4
 # the type of image you want to analyze - True: only bf images are analyzed; False: bf and tr images are analyzed
 bf_only = False
 # name of output Excel file
@@ -45,16 +45,17 @@ def store_values(detected_cells, bf_only):
             is_labeled = near_red_label(center, radius_in_pixel)
             if (not false_positive) and is_labeled:
                 ellipse = find_ellipse(center, radius_in_pixel)
-                ((centx,centy), (minor_axis_b, major_axis_a), angle) = ellipse
-                print('a', major_axis_a)
-                print('b', minor_axis_b)
-                print(center)
-                print((centx, centy))
-                print('radius', radius_in_pixel)
-                aspect_ratio = major_axis_a / minor_axis_b
-                taylor = (major_axis_a - minor_axis_b) / (major_axis_a + minor_axis_b)
-                eccentricity = math.sqrt(1 - (minor_axis_b / major_axis_a))
-                circularity = (4 * math.pi * area) / (perimeter ** 2)
+                if ellipse == 'ellipse not found':
+                    aspect_ratio = 'NA'
+                    taylor = 'NA'
+                    eccentricity = 'NA'
+                    circularity =  'NA'
+                else:
+                    ((centx,centy), (minor_axis_b, major_axis_a), angle) = ellipse
+                    aspect_ratio = major_axis_a / minor_axis_b
+                    taylor = (major_axis_a - minor_axis_b) / (major_axis_a + minor_axis_b)
+                    eccentricity = math.sqrt(1 - (minor_axis_b / major_axis_a))
+                    circularity = (4 * math.pi * area) / (perimeter ** 2)
                 if bf_only:
                     specific_cell = {'center': center, 'radius in pixels': radius_in_pixel, 'diameter': diameter,
                                      'area': area, 'aspect ratio': aspect_ratio, 'taylor': taylor,
