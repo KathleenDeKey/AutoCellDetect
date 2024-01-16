@@ -8,13 +8,13 @@ import math
 # path to the folder containing images
 input_folder_path = 'delivered'
 # number label for the set of images
-file_number = 6
+file_number = 4
 # the type of image you want to analyze - True: only bf images are analyzed; False: bf and tr images are analyzed
 bf_only = False
 # name of output Excel file
 output_file_name = 'output_example2.xlsx'
 # relative path to the folder to save your results; will create a new folder if it does not exist
-output_folder_path = 'delivered-results'
+output_folder_path = 'delivered-results-ver2'
 
 # ** constant values **
 
@@ -29,7 +29,7 @@ red = (36, 28, 237)
 # ** Functions **
 
 # Store Values to Dictionary
-def store_values(detected_cells, bf_only, bfimg, trimg, processed_img):
+def store_values(detected_cells, bf_only, bfimg, processed_img, trimg=None):
     index = 0
     cells = {}
     if detected_cells is not None:
@@ -90,7 +90,7 @@ def near_red_label(center, radius, bfimg):
 
 
 # Draw Cells on Images
-def draw_cells(cells: dict, bf_only, bfimg, trimg):
+def draw_cells(cells: dict, bf_only, bfimg, trimg=None):
     for (index, cell) in cells.items():
         center = cell['center']
         radius = cell['radius in pixels']
@@ -99,6 +99,7 @@ def draw_cells(cells: dict, bf_only, bfimg, trimg):
         cv2.putText(bfimg, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         ellipse = cell['ellipse properties']
         cv2.ellipse(bfimg_copy, ellipse, (0, 255, 0), 2)
+        cv2.putText(bfimg_copy, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         if not bf_only:
             cv2.circle(trimg, center, radius, (0, 255, 0), 2)
             cv2.putText(trimg, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
@@ -131,7 +132,7 @@ def find_corrected_cell_intensity(center, radius, cell_intensity, area, trimg):
 # Find the longest axes a and the shortest axes b for the cell
 def find_ellipse(center, radius, processed_img):
     cell_mask = np.zeros_like(processed_img)
-    cell_mask = cv2.circle(cell_mask, center, radius * 2, (255, 255, 255), thickness=cv2.FILLED)
+    cell_mask = cv2.circle(cell_mask, center, round(radius * 1.3), (255, 255, 255), thickness=cv2.FILLED)
     cell_area = cv2.bitwise_and(processed_img, cell_mask)
     contours, _ = cv2.findContours(cell_area, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours:
@@ -239,14 +240,44 @@ while True:
     edges = cv2.Canny(bfGray, threshold1=min_threshold, threshold2=max_threshold)
     combined_preprocessing_image = cv2.hconcat([bfGray, edges])
     cv2.imshow("Adjust Image", combined_preprocessing_image)
+    # ** Apply Hough Circle Transform **
+    detected_cells = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=10, param1=5, param2=15, minRadius=4,
+                                              maxRadius=15)
+    # store values and draw on result image
+    cells = store_values(detected_cells, True, bfimg, processed_img=edges)
+    draw_cells(cells, True, bfimg)
+    combined_cells_image = cv2.hconcat([bfimg, bfimg_copy])
+    cv2.imshow('result', combined_cells_image)
 
     key = cv2.waitKey(1)  # Wait for 1 millisecond
 
-    # Break the loop if the 'Esc' key is pressed
-    if key == 27:
+    # Apply the parameters in processing when 'a' is pressed
+    if key == 97:
+        cv2.destroyAllWindows()  # clean windows
+
+        # ** store, save and show result **
+        if bf_only:
+            cells = store_values(detected_cells, bf_only, bfimg, processed_img=edges)
+            draw_cells(cells, bf_only, bfimg)
+            combined_result_image = cv2.hconcat([bfimg, bfimg_copy, trimg])
+            save_images(bfimg, bfimg_copy)
+
+        else:
+            cells = store_values(detected_cells, bf_only, bfimg, processed_img=edges, trimg=trimg)
+            draw_cells(cells, bf_only, bfimg, trimg)
+            combined_result_image = cv2.hconcat([bfimg, bfimg_copy, trimg])
+            save_images(bfimg, bfimg_copy, trimg)
+
+        write_excel_file(cells, file_number, bf_only)
+
+        cv2.imshow("Result", combined_result_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
         break
+
     # Reset to default value if 'r' key is pressed
-    if key == 'r':
+    if key == 114:
         cv2.setTrackbarPos("ksize", "Adjust Image", 7)
         cv2.setTrackbarPos("sigmax (divide by 10)", "Adjust Image", 15)
         cv2.setTrackbarPos("alpha - contrast (divide by 10)", "Adjust Image", 15)
@@ -254,20 +285,10 @@ while True:
         cv2.setTrackbarPos("min threshold", "Adjust Image", 10)
         cv2.setTrackbarPos("max threshold", "Adjust Image", 60)
 
+    # Break if key 'q' is pressed
+    if key == 27:
+        cv2.destroyAllWindows()
+        break
 
-cv2.destroyAllWindows()
-
-# ** Apply Hough Circle Transform **
-detected_cells = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=10, param1=5, param2=15, minRadius=4,
-                                      maxRadius=15)
-
-# ** store, save and show result **
-cells = store_values(detected_cells, bf_only, bfimg, trimg, processed_img=edges)
-draw_cells(cells, bf_only, bfimg, trimg)
-write_excel_file(cells, file_number, bf_only)
-combined_result_image = cv2.hconcat([bfimg, bfimg_copy, trimg])
-cv2.imshow("Result", combined_result_image)
-save_images(bfimg, bfimg_copy, trimg)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+print('All Done')
 
