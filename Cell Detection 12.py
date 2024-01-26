@@ -8,7 +8,7 @@ import math
 # path to the folder containing images
 input_folder_path = 'delivered'
 # number label for the set of images
-file_number = 3
+file_number = 6
 # the type of image you want to analyze - True: only bf images are analyzed; False: bf and tr images are analyzed
 bf_only = False
 # name of output Excel file
@@ -109,8 +109,6 @@ def draw_cells(cells: dict, bf_only, bfimg, trimg=None):
         if ellipse != "ellipse not found":
             cv2.ellipse(bfimg_copy, ellipse, (0, 255, 0), 2)
             cv2.putText(bfimg_copy, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        else:
-            print("ellipse not found")
         if not bf_only:
             cv2.circle(trimg, center, radius, (0, 255, 0), 2)
             cv2.putText(trimg, str(index), text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
@@ -143,7 +141,7 @@ def find_corrected_cell_intensity(center, radius, cell_intensity, area, trimg):
 # Find the contour of the cell
 def find_contour(center, radius, processed_img):
     cell_mask = np.zeros_like(processed_img)
-    cell_mask = cv2.circle(cell_mask, center, round(radius * 1.5), (255, 255, 255), thickness=cv2.FILLED)
+    cell_mask = cv2.circle(cell_mask, center, round(radius * 1.1), (255, 255, 255), thickness=cv2.FILLED)
     cell_area = cv2.bitwise_and(processed_img, cell_mask)
     contours, _ = cv2.findContours(cell_area, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours
@@ -155,16 +153,11 @@ def find_ellipse(contours, radius):
         if len(contour) >= 5:
             cell_ellipse = cv2.fitEllipse(contour)
             (axes1, axes2) = cell_ellipse[1]
-            # the difference in length between major axes and minor axes cannot be greater than 55 pixels
-            too_elliptical = abs(axes1 - axes2) > 5
-            # print("too elliptical", too_elliptical)
-            # the length of axes should be similar to the radius with at most +/- 5 pixels
+            # the length of axes should be similar to the radius with at most +/- 3 pixels
             similar_radius = (radius + 5 > axes1 > radius - 5) and (radius + 5 > axes1 > radius - 5)
-            # print("similar radius", similar_radius)
             # the axes cannot be too small
-            too_small = axes1 < 9 and axes2 < 9
-            # print("too small", too_small)
-            if (not too_elliptical) and similar_radius and (not too_small):
+            too_small = axes1 < 5 and axes2 < 7
+            if similar_radius and (not too_small):
                 return cell_ellipse
     return 'ellipse not found'
 
@@ -209,7 +202,7 @@ def save_images(bfimg, bfimg_copy, trimg=None):
 
 
 # ** Create slider window and trackbars **
-cv2.namedWindow("Adjust Image", cv2.WINDOW_AUTOSIZE)
+cv2.namedWindow("Adjust Image", cv2.WINDOW_NORMAL)
 
 
 def on_trackbar(value):
@@ -277,6 +270,7 @@ while True:
     combined_cells_image = cv2.hconcat([bfimg, bfimg_copy])
     combined_preprocessing_image = cv2.cvtColor(combined_preprocessing_image, cv2.COLOR_GRAY2BGR)
     total_combined_image = np.vstack([combined_preprocessing_image, combined_cells_image])
+    total_combined_image = cv2.resize(total_combined_image, (0,0), fx=0.7, fy=0.7)
     cv2.imshow("Adjust Image", total_combined_image)
 
     key = cv2.waitKey(10)  # Wait for 1 millisecond
@@ -299,7 +293,7 @@ while True:
             save_images(bfimg, bfimg_copy, trimg)
 
         write_excel_file(cells, file_number, bf_only)
-
+        combined_result_image = cv2.resize(combined_result_image, (0,0), fx=0.7, fy=0.7)
         cv2.imshow("Result", combined_result_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
