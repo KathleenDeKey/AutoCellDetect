@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import math
 
+
 # ** Choose File **
 # path to the folder containing images
 input_folder_path = 'delivered'
@@ -38,7 +39,7 @@ def store_values(detected_cells, bf_only, bfimg, processed_img, trimg=None):
             center = (circle[0], circle[1])
             radius_in_pixel = circle[2]
             diameter = radius_in_pixel * 2 * um_per_pixel
-            area = np.pi * ((diameter / 2) ** 2)
+            area = np.pi * ((radius_in_pixel) ** 2)
             false_positive = contains_red(center, radius_in_pixel, bfimg)
             is_labeled = near_red_label(center, radius_in_pixel, bfimg)
             if (not false_positive) and is_labeled:
