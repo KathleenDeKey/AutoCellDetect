@@ -1,3 +1,16 @@
-# Cell-Detection
+# Automatic Cell Detection
 
-This repo is for versatile cell detection and quantification via openCV automation under a PyQt GUI.
+AutoCellDetect is a library for automatically identifying and characterizing cells for microscopic or AFM images. 
+
+## Key Features
+* Automatically detects cells in an image or cells next to red labels
+* Annotate and save image file with identified cells
+* Find cell characteristics: center, average diameter, perimeter, area, aspect ratio, circularity, cell intensity etc
+* Outputs cell characteristics on an excel file
+
+## Installation
+
+Use package manager pip to install
+```bash
+pip install autoCellDetect
+```
