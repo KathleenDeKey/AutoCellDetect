@@ -78,7 +78,7 @@ def contains_red(red, center, radius, bfimg) -> bool:
 
 
 # determine if the detected cell is near a red pixel
-def near_red_label(red, center, radius, bfimg):
+def near_red_label(red, center, radius, bfimg) -> bool:
     radius *= 5
     return contains_red(red, center, radius, bfimg)
 
