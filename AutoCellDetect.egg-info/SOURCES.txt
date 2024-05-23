@@ -1,0 +1,13 @@
+LICENSE
+README.md
+setup.py
+AutoCellDetect/CellDetection.py
+AutoCellDetect/DetectionWInterface.py
+AutoCellDetect/ResizeFactor.py
+AutoCellDetect/SelectRegion.py
+AutoCellDetect/__init__.py
+AutoCellDetect.egg-info/PKG-INFO
+AutoCellDetect.egg-info/SOURCES.txt
+AutoCellDetect.egg-info/dependency_links.txt
+AutoCellDetect.egg-info/requires.txt
+AutoCellDetect.egg-info/top_level.txt

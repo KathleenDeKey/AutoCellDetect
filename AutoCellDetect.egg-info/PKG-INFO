@@ -1,3 +1,15 @@
+Metadata-Version: 2.1
+Name: AutoCellDetect
+Version: 0.1.0
+Summary: Automatic Cell Detection for Microscopic Images
+Author: Kathleen De Key
+Author-email: kkey35@gatech.edu
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pandas
+Requires-Dist: cv2
+Requires-Dist: numpy
+
 # Automatic Cell Detection
 
 AutoCellDetect is a library for automatically identifying and characterizing cells for microscopic or AFM images. 
@@ -13,5 +25,5 @@ AutoCellDetect is a library for automatically identifying and characterizing cel
 
 Use package manager pip to install
 ```bash
-pip install AutoCellDetect
+pip install autoCellDetect
 ```
